@@ -5,14 +5,14 @@ export class GeminiService {
   async parseVoiceCommand(command: string): Promise<string | null> {
     try {
       /**
-       * The API key must be obtained exclusively from the environment variable process.env.API_KEY.
-       * Do not use VITE_GEMINI_API_KEY or import.meta.env as the SDK is strictly configured 
-       * to look for process.env.API_KEY in this execution context.
+       * CRITICAL: The API key MUST be obtained from process.env.API_KEY.
+       * If you have set VITE_GEMINI_API_KEY in your environment, please rename it to API_KEY.
        */
       const apiKey = process.env.API_KEY;
       
       if (!apiKey) {
-        console.error("Gemini API Key is missing. Please ensure your environment variable in Netlify is named exactly 'API_KEY' (not 'VITE_GEMINI_API_KEY').");
+        console.error("Gemini API Key is missing from process.env.API_KEY. Please check your environment variables.");
+        // Return null so the UI can show the "I couldn't understand" message or handle the error
         return null;
       }
 
@@ -20,25 +20,38 @@ export class GeminiService {
       
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
-        contents: [{ parts: [{ text: command }] }],
+        contents: [{ parts: [{ text: `Convert this voice command to a mathematical expression: "${command}"` }] }],
         config: {
-          systemInstruction: `You are a mathematical command parser. Your job is to convert natural language queries (English or Hindi mixed) into valid mathematical expressions that can be evaluated using standard JavaScript math functions or simple syntax.
+          systemInstruction: `You are a mathematical command parser. Your task is to extract a pure mathematical expression from a natural language string (can be English, Hindi, or mixed Hinglish).
           
-          Rules:
-          1. Convert percentages: "25 percent of 400" -> "0.25 * 400"
-          2. Convert trig: "sin 30" -> "sin(30 * Math.PI / 180)"
-          3. Convert powers: "5 power 3" -> "5 ** 3"
-          4. Convert roots: "square root of 144" -> "Math.sqrt(144)"
-          5. Convert logs: "log 10" -> "Math.log10(10)", "natural log" -> "Math.log"
-          6. Handle Hindi numbers/operators: "das plus bees" -> "10 + 20"
+          EXAMPLES:
+          - "2 plus 3" -> "2 + 3"
+          - "10 divided by 5" -> "10 / 5"
+          - "sin 30 degree" -> "sin(30 * PI / 180)"
+          - "log 10" -> "log(10)"
+          - "square root of 144" -> "sqrt(144)"
+          - "5 power 3" -> "5 ** 3"
+          - "25 percent of 400" -> "0.25 * 400"
+          - "das aur bees ka jod" -> "10 + 20"
+          - "pachis ka vargmool" -> "sqrt(25)"
           
-          Only return the raw mathematical expression string. No text, no explanation. If you cannot parse it, return 'ERROR'.`,
+          RULES:
+          1. Use standard JS operators: +, -, *, /, **.
+          2. Use these functions only: sin, cos, tan, sqrt, log (base 10), ln, fact.
+          3. Use these constants: PI, E.
+          4. Degrees MUST be converted to radians using "* PI / 180" inside the function.
+          5. Percentages like "X percent of Y" must be " (X/100) * Y ".
+          6. Output ONLY the expression string. No words, no punctuation.
+          7. If it's not a math command, return exactly: ERROR`,
           responseMimeType: "text/plain",
         },
       });
 
       const text = response.text?.trim();
-      if (!text || text === 'ERROR') return null;
+      if (!text || text === 'ERROR') {
+        console.warn("AI could not parse command:", command, "Response:", text);
+        return null;
+      }
       
       return text;
     } catch (error) {
