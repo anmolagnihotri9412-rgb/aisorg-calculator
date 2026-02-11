@@ -1,0 +1,7 @@
+{
+  "name": "Smart AI Voice Calculator",
+  "description": "An advanced scientific calculator with natural language voice command support, speech-to-text, and text-to-speech capabilities.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
