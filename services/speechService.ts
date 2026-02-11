@@ -23,21 +23,24 @@ export class SpeechService {
 
     this.recognition.onresult = (event: any) => {
       const text = event.results[0][0].transcript;
+      console.log("[SpeechService] Raw Browser Transcript:", text);
       onResult(text);
     };
 
     this.recognition.onerror = (event: any) => {
+      console.error("[SpeechService] Error Event:", event.error);
       onError(event.error);
     };
 
     this.recognition.onend = () => {
+      console.log("[SpeechService] Session Ended");
       if (onEnd) onEnd();
     };
 
     try {
       this.recognition.start();
     } catch (e) {
-      console.error("Speech recognition start failed", e);
+      console.error("[SpeechService] Failed to start:", e);
       if (onEnd) onEnd();
     }
   }

@@ -83,7 +83,9 @@ const App: React.FC = () => {
       async (text) => {
         setIsListening(false);
         setIsProcessing(true);
-        console.log("Speech recognized:", text);
+        
+        // REQUESTED LOG: Explicitly label the transcript for debugging
+        console.log("Transcript:", text);
         
         const expression = await geminiService.parseVoiceCommand(text);
         
@@ -100,6 +102,8 @@ const App: React.FC = () => {
           speechService.speak(`The answer for "${text}" is ${res}`);
         } else {
           speechService.speak("Sorry, I could not understand that calculation.");
+          setVoiceError("AI couldn't interpret that command.");
+          setTimeout(() => setVoiceError(null), 3000);
         }
         setIsProcessing(false);
       },
@@ -132,12 +136,12 @@ const App: React.FC = () => {
       <header className="px-6 py-4 flex justify-between items-center bg-white/80 dark:bg-gray-900/80 backdrop-blur-md z-10 border-b border-gray-200 dark:border-gray-800">
         <h1 className="text-xl font-bold tracking-tight text-indigo-600 dark:text-indigo-400">Smart AI Calc</h1>
         <div className="flex items-center gap-4">
-          <button onClick={() => setShowHistory(!showHistory)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+          <button onClick={() => setShowHistory(!showHistory)} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors" title="History">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
           </button>
-          <button onClick={toggleTheme} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors">
+          <button onClick={toggleTheme} className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors" title="Toggle Theme">
             {theme === Theme.LIGHT ? (
               <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
@@ -176,7 +180,7 @@ const App: React.FC = () => {
 
       {/* Voice Mic Overlay */}
       {isListening && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-indigo-600/95 backdrop-blur-xl text-white">
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-indigo-600/95 backdrop-blur-xl text-white animate-in fade-in duration-200">
             <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6 animate-pulse">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
@@ -195,7 +199,7 @@ const App: React.FC = () => {
 
       {/* Status Indicators */}
       {voiceError && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-red-500 text-white rounded-full shadow-lg text-sm font-medium animate-bounce">
+        <div className="absolute top-24 left-1/2 -translate-x-1/2 z-50 px-6 py-2 bg-red-500 text-white rounded-full shadow-lg text-sm font-medium animate-bounce whitespace-nowrap">
             {voiceError}
         </div>
       )}
@@ -203,7 +207,7 @@ const App: React.FC = () => {
       {isProcessing && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gray-900/80 backdrop-blur-sm text-white">
             <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-lg">Analyzing...</p>
+            <p className="text-lg">Analyzing Command...</p>
         </div>
       )}
 

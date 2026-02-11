@@ -5,22 +5,23 @@ export class GeminiService {
   async parseVoiceCommand(command: string): Promise<string | null> {
     try {
       /**
-       * The API key must be obtained exclusively from the environment variable process.env.API_KEY.
-       * This is a strict requirement for the Google GenAI SDK in this environment.
-       * Ensure your deployment environment (e.g., Netlify) has an environment variable 
-       * exactly named 'API_KEY'.
+       * SDK REQUIREMENT: The API key MUST be obtained from process.env.API_KEY.
+       * If using VITE_GEMINI_API_KEY in your host (like Netlify), ensure it is 
+       * mapped to 'API_KEY' in the environment settings.
        */
       const apiKey = process.env.API_KEY;
       
-      console.log("Gemini API Key defined:", !!apiKey);
+      console.log("[GeminiService] API Key check:", apiKey ? "Present" : "MISSING");
       
       if (!apiKey) {
-        console.error("Gemini API Key is missing. Please check your environment variables in Netlify/Hosting.");
+        console.error("[GeminiService] Error: process.env.API_KEY is not defined. Voice processing will fail.");
         return null;
       }
 
       const ai = new GoogleGenAI({ apiKey });
       
+      console.log("[GeminiService] Sending command to AI:", command);
+
       const response = await ai.models.generateContent({
         model: 'gemini-3-flash-preview',
         contents: [{ parts: [{ text: command }] }],
@@ -51,15 +52,15 @@ export class GeminiService {
       });
 
       const text = response.text?.trim();
-      console.log("AI Command Interpretation:", text);
+      console.log("[GeminiService] AI Response Text:", text);
       
       if (!text || text === 'ERROR') {
         return null;
       }
       
       return text;
-    } catch (error) {
-      console.error("Gemini Parsing Error:", error);
+    } catch (error: any) {
+      console.error("[GeminiService] API Exception:", error.message || error);
       return null;
     }
   }
