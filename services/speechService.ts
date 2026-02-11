@@ -1,4 +1,3 @@
-
 export class SpeechService {
   private recognition: any;
   private synthesis: SpeechSynthesis;
@@ -11,7 +10,8 @@ export class SpeechService {
       this.recognition = new SpeechRecognition();
       this.recognition.continuous = false;
       this.recognition.interimResults = false;
-      this.recognition.lang = 'en-US'; 
+      // Using en-IN to better support mixed English/Hindi commands and regional accents
+      this.recognition.lang = 'en-IN'; 
     }
   }
 
@@ -23,24 +23,23 @@ export class SpeechService {
 
     this.recognition.onresult = (event: any) => {
       const text = event.results[0][0].transcript;
-      console.log("[SpeechService] Raw Browser Transcript:", text);
+      console.log("[SpeechService] Final Result:", text);
       onResult(text);
     };
 
     this.recognition.onerror = (event: any) => {
-      console.error("[SpeechService] Error Event:", event.error);
+      console.error("[SpeechService] Recognition error:", event.error);
       onError(event.error);
     };
 
     this.recognition.onend = () => {
-      console.log("[SpeechService] Session Ended");
       if (onEnd) onEnd();
     };
 
     try {
       this.recognition.start();
     } catch (e) {
-      console.error("[SpeechService] Failed to start:", e);
+      console.error("[SpeechService] Start failure:", e);
       if (onEnd) onEnd();
     }
   }
@@ -49,9 +48,7 @@ export class SpeechService {
     if (this.recognition) {
       try {
         this.recognition.stop();
-      } catch (e) {
-        // Recognition might already be stopped
-      }
+      } catch (e) {}
     }
   }
 
