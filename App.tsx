@@ -83,6 +83,8 @@ const App: React.FC = () => {
       async (text) => {
         setIsListening(false);
         setIsProcessing(true);
+        console.log("Speech recognized:", text);
+        
         const expression = await geminiService.parseVoiceCommand(text);
         
         if (expression) {
@@ -91,32 +93,27 @@ const App: React.FC = () => {
           setResult(res);
           setHistory(prev => [{
             id: Date.now().toString(),
-            expression: text + " (" + expression + ")",
+            expression: text,
             result: res,
             timestamp: Date.now()
           }, ...prev]);
-          speechService.speak(`You said ${text}. The answer is ${res}`);
+          speechService.speak(`The answer for "${text}" is ${res}`);
         } else {
-          speechService.speak("Sorry, I couldn't understand that math operation.");
+          speechService.speak("Sorry, I could not understand that calculation.");
         }
         setIsProcessing(false);
       },
       (err) => {
-        console.error("Voice Error:", err);
+        console.error("Speech Recognition Error:", err);
+        setIsListening(false);
         if (err === 'no-speech') {
-          setVoiceError("I didn't hear anything. Please try again.");
-          // Automatically close overlay after a delay if no speech detected
-          setTimeout(() => {
-            setIsListening(false);
-            setVoiceError(null);
-          }, 2000);
+          setVoiceError("No speech detected.");
+        } else if (err === 'not-allowed') {
+          setVoiceError("Microphone access denied.");
         } else {
-          setIsListening(false);
-          setVoiceError(null);
+          setVoiceError("Voice command failed.");
         }
-      },
-      () => {
-        // Recognition ended
+        setTimeout(() => setVoiceError(null), 3000);
       }
     );
   };
@@ -180,32 +177,33 @@ const App: React.FC = () => {
       {/* Voice Mic Overlay */}
       {isListening && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-indigo-600/95 backdrop-blur-xl text-white">
-            <div className={`w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6 ${voiceError ? 'animate-bounce' : 'animate-pulse'}`}>
-                {voiceError ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6 animate-pulse">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                  </svg>
-                )}
+                </svg>
             </div>
-            <p className="text-xl font-medium">{voiceError || "Listening..."}</p>
-            {!voiceError && <p className="text-sm opacity-70 mt-2">"Try: square root of 25"</p>}
+            <p className="text-xl font-medium">Listening...</p>
+            <p className="text-sm opacity-70 mt-2">"Try: 10 plus 20"</p>
             <button 
-                onClick={() => { setIsListening(false); setVoiceError(null); speechService.stopListening(); }}
+                onClick={() => { setIsListening(false); speechService.stopListening(); }}
                 className="mt-12 px-6 py-2 rounded-full border border-white/30 hover:bg-white/10 transition-colors"
             >
-                {voiceError ? "Close" : "Cancel"}
+                Cancel
             </button>
+        </div>
+      )}
+
+      {/* Status Indicators */}
+      {voiceError && (
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-red-500 text-white rounded-full shadow-lg text-sm font-medium animate-bounce">
+            {voiceError}
         </div>
       )}
 
       {isProcessing && (
         <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gray-900/80 backdrop-blur-sm text-white">
             <div className="w-12 h-12 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p className="text-lg">AI Thinking...</p>
+            <p className="text-lg">Analyzing...</p>
         </div>
       )}
 
@@ -262,13 +260,11 @@ const App: React.FC = () => {
         </div>
 
         <div className="calculator-grid">
-          {/* Row 1 */}
           <button onClick={clear} className="col-span-1 bg-red-50 dark:bg-red-900/20 text-red-500 p-5 rounded-2xl font-bold btn-animation">C</button>
           <button onClick={backspace} className="col-span-1 bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 p-5 rounded-2xl font-bold btn-animation">⌫</button>
           <button onClick={() => handleInput('%')} className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 p-5 rounded-2xl font-bold btn-animation">%</button>
           <button onClick={() => handleInput('÷')} className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-600 dark:text-indigo-400 p-5 rounded-2xl font-bold text-2xl btn-animation">÷</button>
           
-          {/* Numbers & Operators */}
           {[7, 8, 9].map(n => (
             <button key={n} onClick={() => handleInput(n.toString())} className="bg-gray-50 dark:bg-gray-800/50 text-gray-800 dark:text-gray-100 p-5 rounded-2xl font-semibold text-xl btn-animation">{n}</button>
           ))}
@@ -306,7 +302,7 @@ const App: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                     </svg>
                 </div>
-                <span className="text-gray-700 dark:text-gray-200 font-medium">Smart Voice Assistant</span>
+                <span className="text-gray-700 dark:text-gray-200 font-medium">Ask Assistant</span>
             </button>
         </div>
       </div>
