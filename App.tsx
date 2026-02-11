@@ -13,6 +13,7 @@ const App: React.FC = () => {
   const [isListening, setIsListening] = useState<boolean>(false);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
   const [showHistory, setShowHistory] = useState<boolean>(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -76,12 +77,13 @@ const App: React.FC = () => {
 
   const startVoiceInput = () => {
     setIsListening(true);
+    setVoiceError(null);
+    
     speechService.startListening(
       async (text) => {
         setIsListening(false);
         setIsProcessing(true);
         const expression = await geminiService.parseVoiceCommand(text);
-        setIsProcessing(false);
         
         if (expression) {
           setDisplay(expression);
@@ -97,10 +99,24 @@ const App: React.FC = () => {
         } else {
           speechService.speak("Sorry, I couldn't understand that math operation.");
         }
+        setIsProcessing(false);
       },
       (err) => {
-        console.error(err);
-        setIsListening(false);
+        console.error("Voice Error:", err);
+        if (err === 'no-speech') {
+          setVoiceError("I didn't hear anything. Please try again.");
+          // Automatically close overlay after a delay if no speech detected
+          setTimeout(() => {
+            setIsListening(false);
+            setVoiceError(null);
+          }, 2000);
+        } else {
+          setIsListening(false);
+          setVoiceError(null);
+        }
+      },
+      () => {
+        // Recognition ended
       }
     );
   };
@@ -163,19 +179,25 @@ const App: React.FC = () => {
 
       {/* Voice Mic Overlay */}
       {isListening && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-indigo-600/90 backdrop-blur-xl text-white animate-pulse">
-            <div className="w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-indigo-600/95 backdrop-blur-xl text-white">
+            <div className={`w-24 h-24 bg-white/20 rounded-full flex items-center justify-center mb-6 ${voiceError ? 'animate-bounce' : 'animate-pulse'}`}>
+                {voiceError ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 text-yellow-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                )}
             </div>
-            <p className="text-xl font-medium">Listening...</p>
-            <p className="text-sm opacity-70 mt-2">"Try: square root of 25"</p>
+            <p className="text-xl font-medium">{voiceError || "Listening..."}</p>
+            {!voiceError && <p className="text-sm opacity-70 mt-2">"Try: square root of 25"</p>}
             <button 
-                onClick={() => setIsListening(false)}
+                onClick={() => { setIsListening(false); setVoiceError(null); speechService.stopListening(); }}
                 className="mt-12 px-6 py-2 rounded-full border border-white/30 hover:bg-white/10 transition-colors"
             >
-                Cancel
+                {voiceError ? "Close" : "Cancel"}
             </button>
         </div>
       )}

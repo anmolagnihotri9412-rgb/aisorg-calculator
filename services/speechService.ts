@@ -11,11 +11,11 @@ export class SpeechService {
       this.recognition = new SpeechRecognition();
       this.recognition.continuous = false;
       this.recognition.interimResults = false;
-      this.recognition.lang = 'en-US'; // Can be 'hi-IN' for Hindi, but 'en-US' usually handles basic Hinglish well
+      this.recognition.lang = 'en-US'; 
     }
   }
 
-  startListening(onResult: (text: string) => void, onError: (err: any) => void): void {
+  startListening(onResult: (text: string) => void, onError: (err: any) => void, onEnd?: () => void): void {
     if (!this.recognition) {
       onError("Speech recognition not supported in this browser.");
       return;
@@ -30,12 +30,25 @@ export class SpeechService {
       onError(event.error);
     };
 
-    this.recognition.start();
+    this.recognition.onend = () => {
+      if (onEnd) onEnd();
+    };
+
+    try {
+      this.recognition.start();
+    } catch (e) {
+      console.error("Speech recognition start failed", e);
+      if (onEnd) onEnd();
+    }
   }
 
   stopListening(): void {
     if (this.recognition) {
-      this.recognition.stop();
+      try {
+        this.recognition.stop();
+      } catch (e) {
+        // Recognition might already be stopped
+      }
     }
   }
 
